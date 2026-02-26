@@ -1,0 +1,32 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "NodeNext",
+        "lib": ["ESNext", "DOM"],
+        "moduleResolution": "NodeNext",
+        "esModuleInterop": true,
+        "allowJs": true,
+        "checkJs": false,
+        "outDir": "./dist",
+        "rootDir": ".",
+        "strict": true,
+        "noImplicitAny": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "types": ["node", "playwright"]
+    },
+    "include": [
+        "*.ts",
+        "*.mts",
+        "api/**/*.ts",
+        "config/**/*.ts",
+        "tests/**/*.ts",
+        "fixtures/**/*.ts",
+        "pages/**/*.ts",
+        "helpers/**/*.ts",
+        "utils/**/*.ts",
+        "enums/**/*.ts"
+    ],
+    "exclude": ["node_modules", "dist", "playwright-report", "test-results"]
+}

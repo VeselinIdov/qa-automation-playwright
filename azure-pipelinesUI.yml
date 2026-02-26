@@ -1,0 +1,64 @@
+trigger: none
+pr: none
+name: NightlyRun-$(Date:yyyy-MM-dd)$(Rev:.r)
+
+jobs:
+    - job: RunPlaywrightTests
+      timeoutInMinutes: 120
+      pool:
+          vmImage: 'ubuntu-latest'
+
+      steps:
+          - task: UseNode@1
+            inputs:
+                version: '20.x'
+            displayName: 'Install Node.js'
+
+          - script: npm ci
+            displayName: 'Install dependencies'
+
+          - script: npx playwright install --with-deps
+            displayName: 'Install Playwright browsers'
+
+          - script: |
+                echo "Running UI tests in $TEST_ENV environment"
+                npx playwright test --project=ui
+            displayName: 'Run Playwright UI tests'
+            env:
+                CI: 'true'
+                TEST_ENV: $(TEST_ENV)
+
+          # Generate Allure HTML report
+          - script: |
+                npx allure generate allure-results --clean -o allure-report
+            displayName: 'Generate Allure Report'
+            condition: succeededOrFailed()
+
+          # Publish JUnit results (requires junit reporter in config)
+          - task: PublishTestResults@2
+            inputs:
+                testResultsFiles: '**/results.xml'
+                testResultsFormat: 'JUnit'
+                failTaskOnFailedTests: true
+                mergeTestResults: true
+                testRunTitle: 'End-To-End Automated UI Tests'
+            condition: succeededOrFailed()
+            displayName: 'Publish Test Results'
+
+          # Publish Playwright HTML report
+          - task: PublishPipelineArtifact@1
+            inputs:
+                targetPath: playwright-report
+                artifact: playwright-report
+                publishLocation: 'pipeline'
+            condition: succeededOrFailed()
+            displayName: 'Publish Playwright Report'
+
+          # Publish Allure HTML report
+          - task: PublishPipelineArtifact@1
+            inputs:
+                targetPath: allure-report
+                artifact: allure-report
+                publishLocation: 'pipeline'
+            condition: succeededOrFailed()
+            displayName: 'Publish Allure Report'

@@ -10,7 +10,7 @@
         "test:ui": "playwright test tests/ui",
         "test:api": "playwright test tests/api",
         "test:headed": "playwright test --headed",
-        "test:report": "playwright show-report",
+        "report": "allure generate allure-results --clean -o allure-report",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier . --write",

@@ -223,12 +223,12 @@ npx allure open allure-report
 
 - `BaseRequest` centralizes HTTP methods (`get/post/put/patch/delete`) and auth headers.
 - `PostsEndpoint` contains post-specific API methods:
-  - `getPost`
-  - `getPosts`
-  - `createPost`
-  - `updatePost`
-  - `patchPost`
-  - `deletePost`
+    - `getPost`
+    - `getPosts`
+    - `createPost`
+    - `updatePost`
+    - `patchPost`
+    - `deletePost`
 
 ## API Test Data
 
@@ -257,4 +257,3 @@ Both install dependencies, run Playwright, and publish:
 - Keep class/interface names in PascalCase.
 - Keep method/fixture/function names in camelCase.
 - Prefer behavior-focused test names (`should ...`).
-

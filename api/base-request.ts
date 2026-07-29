@@ -47,7 +47,7 @@ export class BaseRequest {
     deleteRequest(path: string, token: string) {
         logger.info(`Sending DELETE request to: ${path}`)
         return this.api.delete(path, {
-            headers: this.authHeaders(token)
+            headers: this.authHeaders(token),
         })
     }
 }

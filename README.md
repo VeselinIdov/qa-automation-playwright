@@ -135,10 +135,13 @@ npm run test:api
 npm run test:headed
 ```
 
-### Open HTML report
+### Build the Allure report
+
+There is no HTML reporter configured — the reporters are `allure-playwright`
+(`allure-results/`) and `junit` (`results.xml`).
 
 ```bash
-npm run test:report
+npm run report
 ```
 
 ## Lint / Format / Typecheck

@@ -1,0 +1,34 @@
+{
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Bash|PowerShell",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node .claude/hooks/guard-tests.mjs",
+                        "timeout": 10,
+                        "statusMessage": "Checking for a suite run"
+                    },
+                    {
+                        "type": "command",
+                        "command": "node .claude/hooks/guard-paths.mjs",
+                        "timeout": 10,
+                        "statusMessage": "Checking protected paths"
+                    }
+                ]
+            },
+            {
+                "matcher": "Write|Edit|Read|NotebookEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node .claude/hooks/guard-paths.mjs",
+                        "timeout": 10,
+                        "statusMessage": "Checking protected paths"
+                    }
+                ]
+            }
+        ]
+    }
+}

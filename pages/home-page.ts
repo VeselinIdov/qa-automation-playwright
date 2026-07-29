@@ -13,8 +13,6 @@ export class HomePage extends BasePage {
     }
 
     getSectionByName(sectionName: string): Locator {
-        return this.page
-            .locator('[data-test="inventory-item-name"]')
-            .filter({ hasText: sectionName })
+        return this.page.locator('[data-test="inventory-item-name"]').filter({ hasText: sectionName })
     }
 }

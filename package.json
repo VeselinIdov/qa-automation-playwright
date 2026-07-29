@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "engines": {
-        "node": ">=20"
+        "node": "^20.19.0 || ^22.13.0 || >=24"
     },
     "scripts": {
         "test": "playwright test",
@@ -18,22 +18,22 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@faker-js/faker": "^10.0.0",
-        "dotenv": "^16.5.0",
-        "winston": "^3.18.0",
-        "zod": "^4.3.6"
+        "@faker-js/faker": "^10.5.0",
+        "dotenv": "^17.4.2",
+        "winston": "^3.19.0",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
-        "@playwright/test": "^1.58.2",
-        "@types/node": "^24.0.0",
-        "@typescript-eslint/eslint-plugin": "^8.56.1",
-        "@typescript-eslint/parser": "^8.56.1",
-        "allure-commandline": "^2.36.0",
-        "allure-playwright": "^3.4.5",
-        "eslint": "^10.0.2",
+        "@playwright/test": "^1.62.0",
+        "@types/node": "^24.10.13",
+        "@typescript-eslint/eslint-plugin": "^8.65.0",
+        "@typescript-eslint/parser": "^8.65.0",
+        "allure-commandline": "^2.43.0",
+        "allure-playwright": "^3.10.2",
+        "eslint": "^10.8.0",
         "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-playwright": "^2.7.1",
-        "prettier": "^3.8.1",
+        "eslint-plugin-playwright": "^2.11.0",
+        "prettier": "^3.9.6",
         "typescript": "^5.9.3"
     }
 }

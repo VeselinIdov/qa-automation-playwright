@@ -4,11 +4,9 @@ export class LogUtils {
     private logger: winston.Logger
 
     constructor() {
-        const logFormat = winston.format.printf(
-            ({ timestamp, level, message, stack }) => {
-                return `${timestamp} [${level}]: ${stack || message}`
-            }
-        )
+        const logFormat = winston.format.printf(({ timestamp, level, message, stack }) => {
+            return `${timestamp} [${level}]: ${stack || message}`
+        })
 
         this.logger = winston.createLogger({
             level: 'info',
@@ -18,10 +16,7 @@ export class LogUtils {
             ),
             transports: [
                 new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize(),
-                        winston.format.simple()
-                    ),
+                    format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
                 }),
                 new winston.transports.File({
                     filename: `logs/app-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.log`,

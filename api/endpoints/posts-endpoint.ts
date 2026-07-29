@@ -28,4 +28,3 @@ export class PostsEndpoint extends BaseRequest {
         return await this.deleteRequest(`${this.postsPath}/${postId}`, token)
     }
 }
-

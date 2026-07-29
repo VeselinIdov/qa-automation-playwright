@@ -26,7 +26,8 @@
         "pages/**/*.ts",
         "helpers/**/*.ts",
         "utils/**/*.ts",
-        "enums/**/*.ts"
+        "enums/**/*.ts",
+        "types/**/*.d.ts"
     ],
     "exclude": ["node_modules", "dist", "playwright-report", "test-results"]
 }

@@ -5,14 +5,14 @@ export const postSchema = z.object({
     userId: z.number(),
     title: z.string(),
     body: z.string(),
-  })
-  
-  export type PostResponse = z.infer<typeof postSchema>
+})
 
-export function deserializePostResponse(value: unknown){
+export type PostResponse = z.infer<typeof postSchema>
+
+export function deserializePostResponse(value: unknown) {
     return postSchema.parse(value)
 }
 
-export function deserializePostsResponse(value: unknown){
+export function deserializePostsResponse(value: unknown) {
     return z.array(postSchema).parse(value)
 }

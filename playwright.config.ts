@@ -7,18 +7,17 @@ export const enum EnvironmentTarget {
 }
 
 const ENV = process.env.TEST_ENV || EnvironmentTarget.DEFAULT
-dotenv.config({ path: path.resolve(__dirname, `profiles/.env.${ENV}`) })
+dotenv.config({
+    path: path.resolve(__dirname, `profiles/.env.${ENV}`),
+    quiet: true,
+})
 
 if (!process.env.UI_URL) {
-    throw new Error(
-        `Environment variable 'UI_URL' is not set in profiles/.env.${ENV}`
-    )
+    throw new Error(`Environment variable 'UI_URL' is not set in profiles/.env.${ENV}`)
 }
 
 if (!process.env.API_URL) {
-    throw new Error(
-        `Environment variable 'API_URL' is not set in profiles/.env.${ENV}`
-    )
+    throw new Error(`Environment variable 'API_URL' is not set in profiles/.env.${ENV}`)
 }
 
 export default defineConfig({
@@ -31,10 +30,7 @@ export default defineConfig({
     workers: process.env.CI ? 2 : 3, // Disable parallelism
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     reporter: [
-        [
-            'allure-playwright',
-            { outputFolder: 'allure-results', detail: true, suiteTitle: true },
-        ],
+        ['allure-playwright', { outputFolder: 'allure-results', detail: true, suiteTitle: true }],
         ['junit', { outputFile: 'results.xml' }],
     ],
     timeout: 15000,

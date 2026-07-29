@@ -11,4 +11,3 @@ export function randomTitle() {
 export function randomBody() {
     return faker.lorem.paragraph({ min: 1, max: 3 })
 }
-

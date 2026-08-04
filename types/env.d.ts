@@ -1,7 +1,6 @@
 // Ambient declarations for the variables loaded from profiles/.env.<TEST_ENV>.
-// playwright.config.ts throws at load time if UI_URL or API_URL is missing, so
-// those two are declared non-optional; the rest are only read inside the
-// projects that need them.
+// playwright.config.ts throws at load time for every name in REQUIRED_ENV_VARS,
+// so those are declared non-optional; TEST_ENV itself has a default.
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
@@ -12,10 +11,10 @@ declare global {
             /** Selects profiles/.env.<TEST_ENV>, defaults to dev */
             TEST_ENV?: string
             /** saucedemo login, consumed by tests/auth.setup.ts */
-            USER_NAME?: string
-            PASSWORD?: string
+            USER_NAME: string
+            PASSWORD: string
             /** Bearer token for the posts API */
-            SECRET_KEY?: string
+            SECRET_KEY: string
         }
     }
 }

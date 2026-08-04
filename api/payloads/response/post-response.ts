@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const postSchema = z.object({
+export const postSchema = z.strictObject({
     id: z.number(),
     userId: z.number(),
     title: z.string(),

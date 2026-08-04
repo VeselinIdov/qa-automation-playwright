@@ -2,22 +2,19 @@ import { defineConfig, devices } from '@playwright/test'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 
-export const enum EnvironmentTarget {
-    DEFAULT = 'dev',
-}
+const DEFAULT_ENV = 'dev'
+const REQUIRED_ENV_VARS = ['UI_URL', 'API_URL', 'USER_NAME', 'PASSWORD', 'SECRET_KEY'] as const
 
-const ENV = process.env.TEST_ENV || EnvironmentTarget.DEFAULT
+const ENV = process.env.TEST_ENV || DEFAULT_ENV
 dotenv.config({
     path: path.resolve(__dirname, `profiles/.env.${ENV}`),
     quiet: true,
 })
 
-if (!process.env.UI_URL) {
-    throw new Error(`Environment variable 'UI_URL' is not set in profiles/.env.${ENV}`)
-}
-
-if (!process.env.API_URL) {
-    throw new Error(`Environment variable 'API_URL' is not set in profiles/.env.${ENV}`)
+for (const name of REQUIRED_ENV_VARS) {
+    if (!process.env[name]) {
+        throw new Error(`Environment variable '${name}' is not set in profiles/.env.${ENV}`)
+    }
 }
 
 export default defineConfig({

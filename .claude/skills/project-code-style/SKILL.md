@@ -149,10 +149,11 @@ export class PostsEndpoint extends BaseRequest {
 ## Response validation
 
 Every response shape gets a zod schema, an inferred type, and a deserializer
-that accepts `unknown`:
+that accepts `unknown`. Use `z.strictObject` — `z.object` silently drops keys the
+schema doesn't declare, so a field appearing in the response goes unnoticed:
 
 ```ts
-export const postSchema = z.object({
+export const postSchema = z.strictObject({
     id: z.number(),
     userId: z.number(),
     title: z.string(),
@@ -201,7 +202,7 @@ adding it to the fixture type and the `extend` block in the same commit.
 import { test, expect } from '../../fixtures/endpoints-fixtures'
 
 test.describe('Posts API tests', () => {
-    const token = process.env.SECRET_KEY ?? 'test-token'
+    const token = process.env.SECRET_KEY
 
     test('should create a post', { tag: '@api' }, async ({ postsEndpoint }) => {
         const payload: PostPayload = {
@@ -238,6 +239,11 @@ test.describe('Posts API tests', () => {
 All environment values come from `profiles/.env.${TEST_ENV}` (default `dev`),
 loaded once in `playwright.config.ts` with `quiet: true`. Required:
 `UI_URL`, `API_URL`, `USER_NAME`, `PASSWORD`, `SECRET_KEY`.
+
+Never give an env var a placeholder default in a spec. A fallback like
+`process.env.SECRET_KEY ?? 'test-token'` turns a missing secret into a confusing
+401 instead of a clear startup failure. Guard it at config load, declare it
+non-optional in `types/env.d.ts`, and read it directly.
 
 A new required variable must get a fail-fast guard in `playwright.config.ts`
 matching the existing shape:

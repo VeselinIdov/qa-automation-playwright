@@ -4,7 +4,7 @@ import { PostPayload } from '../../api/payloads/requests/post-payloads'
 import { randomBody, randomTitle, randomUserId } from '../../test-data/posts-test-data'
 
 test.describe('Posts API tests', { tag: '@api' }, () => {
-    const token = process.env.SECRET_KEY ?? 'test-token'
+    const token = process.env.SECRET_KEY
 
     test('should retrieve a post by id', async ({ postsEndpoint }) => {
         const response = await postsEndpoint.getPost(1, token)

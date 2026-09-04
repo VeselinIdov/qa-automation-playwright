@@ -4,14 +4,10 @@ import { Page } from '@playwright/test'
 export class LoginPage extends BasePage {
     private readonly usernameField = this.page.getByPlaceholder('Username')
     private readonly passwordField = this.page.getByPlaceholder('Password')
-    private readonly loginButton = this.page.getByText('Login')
+    private readonly loginButton = this.page.getByRole('button', { name: 'Login' })
 
     constructor(page: Page) {
         super(page)
-    }
-
-    async open(): Promise<void> {
-        await this.page.goto('/')
     }
 
     async login(username: string, password: string): Promise<void> {

@@ -60,10 +60,9 @@ export default defineConfig({
             name: 'api',
             testMatch: /api\/.*\.test\.ts/,
             use: {
+                // Headers live on the authedRequest fixture, not here — a token
+                // fetched from a login endpoint isn't known at config load.
                 baseURL: process.env.API_URL,
-                extraHTTPHeaders: {
-                    'Content-Type': 'application/json',
-                },
             },
         },
         // {

@@ -4,27 +4,27 @@ import { PostPayload } from '../payloads/requests/post-payloads'
 export class PostsEndpoint extends BaseRequest {
     private readonly postsPath = 'posts'
 
-    async getPost(postId: number, token: string) {
-        return await this.getRequest(`${this.postsPath}/${postId}`, token)
+    async getPost(postId: number) {
+        return await this.getRequest(`${this.postsPath}/${postId}`)
     }
 
-    async getPosts(token: string) {
-        return await this.getRequest(this.postsPath, token)
+    async getPosts() {
+        return await this.getRequest(this.postsPath)
     }
 
-    async createPost(payload: PostPayload, token: string) {
-        return await this.postRequest(this.postsPath, payload, token)
+    async createPost(payload: PostPayload) {
+        return await this.postRequest(this.postsPath, payload)
     }
 
-    async updatePost(postId: number, payload: PostPayload, token: string) {
-        return await this.putRequest(`${this.postsPath}/${postId}`, payload, token)
+    async updatePost(postId: number, payload: PostPayload) {
+        return await this.putRequest(`${this.postsPath}/${postId}`, payload)
     }
 
-    async patchPost(postId: number, payload: Partial<PostPayload>, token: string) {
-        return await this.patchRequest(`${this.postsPath}/${postId}`, payload, token)
+    async patchPost(postId: number, payload: Partial<PostPayload>) {
+        return await this.patchRequest(`${this.postsPath}/${postId}`, payload)
     }
 
-    async deletePost(postId: number, token: string) {
-        return await this.deleteRequest(`${this.postsPath}/${postId}`, token)
+    async deletePost(postId: number) {
+        return await this.deleteRequest(`${this.postsPath}/${postId}`)
     }
 }

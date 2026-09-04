@@ -4,10 +4,8 @@ import { PostPayload } from '../../api/payloads/requests/post-payloads'
 import { randomBody, randomTitle, randomUserId } from '../../test-data/posts-test-data'
 
 test.describe('Posts API tests', { tag: '@api' }, () => {
-    const token = process.env.SECRET_KEY
-
     test('should retrieve a post by id', async ({ postsEndpoint }) => {
-        const response = await postsEndpoint.getPost(1, token)
+        const response = await postsEndpoint.getPost(1)
 
         expect(response.status()).toBe(200)
 
@@ -17,7 +15,7 @@ test.describe('Posts API tests', { tag: '@api' }, () => {
     })
 
     test('should retrieve all posts', async ({ postsEndpoint }) => {
-        const response = await postsEndpoint.getPosts(token)
+        const response = await postsEndpoint.getPosts()
 
         expect(response.status()).toBe(200)
 
@@ -31,7 +29,7 @@ test.describe('Posts API tests', { tag: '@api' }, () => {
             title: randomTitle(),
             body: randomBody(),
         }
-        const response = await postsEndpoint.createPost(payload, token)
+        const response = await postsEndpoint.createPost(payload)
 
         expect(response.status()).toBe(201)
 
@@ -46,7 +44,7 @@ test.describe('Posts API tests', { tag: '@api' }, () => {
             title: randomTitle(),
             body: randomBody(),
         }
-        const response = await postsEndpoint.updatePost(1, payload, token)
+        const response = await postsEndpoint.updatePost(1, payload)
 
         expect(response.status()).toBe(200)
 
@@ -59,7 +57,7 @@ test.describe('Posts API tests', { tag: '@api' }, () => {
         const payload: Partial<PostPayload> = {
             title: randomTitle(),
         }
-        const response = await postsEndpoint.patchPost(1, payload, token)
+        const response = await postsEndpoint.patchPost(1, payload)
 
         expect(response.status()).toBe(200)
 
@@ -68,9 +66,8 @@ test.describe('Posts API tests', { tag: '@api' }, () => {
     })
 
     test('should delete a post', async ({ postsEndpoint }) => {
-        const response = await postsEndpoint.deletePost(1, token)
+        const response = await postsEndpoint.deletePost(1)
 
-        expect(response.status()).toBeGreaterThanOrEqual(200)
-        expect(response.status()).toBeLessThan(300)
+        expect(response.status()).toBe(200)
     })
 })

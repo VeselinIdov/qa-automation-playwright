@@ -11,6 +11,7 @@
         "test:api": "playwright test tests/api",
         "test:headed": "playwright test --headed",
         "report": "allure generate allure-results --clean -o allure-report",
+        "triage": "node .azure/scripts/triage-failures.mjs",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier . --write",
@@ -24,6 +25,7 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
+        "@anthropic-ai/sdk": "^0.116.0",
         "@playwright/test": "^1.62.0",
         "@types/node": "^24.10.13",
         "@typescript-eslint/eslint-plugin": "^8.65.0",

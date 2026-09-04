@@ -1,0 +1,11 @@
+# Normalise line endings so `npm run format:check` behaves the same on Windows
+# and CI. Prettier is configured with endOfLine: 'lf'.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webm binary
+*.zip binary

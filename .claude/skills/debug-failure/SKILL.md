@@ -41,8 +41,8 @@ npx playwright show-trace test-results/<dir>/trace.zip
 ```
 
 **The trace gap matters.** `retries` is `process.env.CI ? 1 : 0` — locally there
-are no retries, so a local failure produces **no trace**. If you need one, ask
-the user to re-run with retries enabled rather than running it yourself:
+are no retries, so a local failure produces **no trace**. To get one, re-run that
+spec with retries on:
 
 ```bash
 npx playwright test tests/ui/home-page.test.ts --retries=1
@@ -61,12 +61,16 @@ output plus `logs/app-*.log` shows which request was sent
 (`Sending GET request to: posts/1`). A zod `.parse()` failure prints the exact
 path and expected type — that's a contract change, not a test bug.
 
-## 3. Reproduce — the user runs these, not you
+## 3. Reproduce
 
-**Do not run `playwright test` yourself.** It hits live services, drives a real
-browser, and overwrites `results.xml` and `test-results/`. Diagnose from the
-artifacts already on disk; when reproduction is the only way forward, hand the
-user the exact command and wait for the output.
+**Read the artifacts on disk first.** A reproduction costs a live run and
+overwrites `results.xml` and `test-results/` — the evidence you are standing on.
+Reach for one only when the artifacts genuinely can't answer the question.
+
+When you do reproduce, run the narrowest command that tests your hypothesis, and
+say what its result will tell you before you run it. `--repeat-each` and
+full-directory runs are expensive; ask before those rather than defaulting to
+them.
 
 ```bash
 # does it fail consistently?
@@ -113,17 +117,17 @@ labels hides which of the four actually happened.
 If `tests/auth.setup.ts` can't log in, `playwright/.auth/user.json` is stale or
 missing and everything downstream fails on the wrong screen. When _all_ UI tests
 are red, check the `setup` result in the report first — and if it needs a re-run,
-ask the user for `npx playwright test --project=setup`.
+`npx playwright test --project=setup` regenerates the storage state.
 
 **Browsers not installed.** Fails instantly with an executable-not-found path
 under `ms-playwright`. `npx playwright install`.
 
-**Missing env var.** `playwright.config.ts` throws before any test runs if
-`UI_URL` or `API_URL` is absent from `profiles/.env.${TEST_ENV}` — the whole run
-dies at load, which reads like a config error rather than a test failure.
-`USER_NAME` / `PASSWORD` / `SECRET_KEY` are _not_ guarded; a missing one shows up
-as a login failure in `setup` or a thrown
-`'SECRET_KEY is missing or empty'` from `BaseRequest.authHeaders`.
+**Missing env var.** `playwright.config.ts` throws before any test runs if any of
+`UI_URL`, `API_URL`, `USER_NAME`, `PASSWORD`, `SECRET_KEY` is absent from
+`profiles/.env.${TEST_ENV}` — the whole run dies at load, which reads like a
+config error rather than a test failure. A _wrong_ (rather than missing) value
+isn't caught: a bad `PASSWORD` fails `setup` at the Products assertion, and a bad
+`SECRET_KEY` shows up as 401s across the `api` project.
 
 **15s timeout.** Both test and `expect` timeouts are 15000ms. A timeout on a
 visibility assertion usually means a wrong locator or an unexpected screen — not

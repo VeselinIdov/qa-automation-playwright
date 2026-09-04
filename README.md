@@ -64,7 +64,6 @@ test-data/
   posts-test-data.ts
 
 utils/
-  helpers.ts
   log-utils.ts
 
 types/
@@ -74,10 +73,17 @@ profiles/
   .env.example
   .env.dev          # gitignored
 
-.claude/            # CLAUDE.md instructions, skills, hooks, agents
+.azure/
+  playwright-job.yml    # shared CI job, both pipelines extend it
+  scripts/
+    triage-failures.mjs # classifies a red run, posts to the build summary
+
+.claude/                # CLAUDE.md instructions, skills, hooks, agents
+.mcp.json               # Playwright MCP server, for reading live markup
 playwright.config.ts
 azure-pipelinesUI.yml
 azure-pipelinesAPI.yml
+.gitattributes
 ```
 
 Generated at runtime and gitignored: `allure-results/`, `allure-report/`,
@@ -102,18 +108,18 @@ file is gitignored — never commit real values.
 
 ### Required env vars
 
-| Var                    | Used by                                          |
-| ---------------------- | ------------------------------------------------ |
-| `UI_URL`               | `baseURL` for the `setup` and `ui` projects      |
-| `API_URL`              | `baseURL` for the `api` project                  |
-| `USER_NAME` `PASSWORD` | `tests/auth.setup.ts` login                      |
-| `SECRET_KEY`           | auth headers in `BaseRequest`, used by API tests |
-| `TEST_ENV`             | selects the profile file, defaults to `dev`      |
+| Var                    | Used by                                     |
+| ---------------------- | ------------------------------------------- |
+| `UI_URL`               | `baseURL` for the `setup` and `ui` projects |
+| `API_URL`              | `baseURL` for the `api` project             |
+| `USER_NAME` `PASSWORD` | `tests/auth.setup.ts` login                 |
+| `SECRET_KEY`           | `apiToken` fixture → API auth header        |
+| `TEST_ENV`             | selects the profile file, defaults to `dev` |
 
-`UI_URL` and `API_URL` are validated at config load — if either is missing the
-run fails immediately with a clear error, before any test starts. The other
-three are not guarded and surface as a login failure or a thrown
-`'SECRET_KEY is missing or empty'`.
+All five are validated at config load — if one is missing the run fails
+immediately with an error naming the variable and the profile file, before any
+test starts. A _wrong_ value is not caught: a bad `PASSWORD` fails `setup`, a bad
+`SECRET_KEY` shows up as 401s in the `api` project.
 
 ## Playwright Projects
 
@@ -258,7 +264,14 @@ and fails at runtime.
 
 ## API Layer
 
-- `BaseRequest` centralizes HTTP methods (`get/post/put/patch/delete`) and auth headers.
+- `BaseRequest` centralizes HTTP methods (`get/post/put/patch/delete`) and request logging.
+  Auth is not threaded through calls — the `authedRequest` fixture builds an
+  `APIRequestContext` carrying `Authorization` and `Content-Type`, and every endpoint
+  hangs off it.
+- The token comes from the worker-scoped `apiToken` fixture, which reads
+  `SECRET_KEY` today. If your API issues tokens from a login endpoint, replace that
+  one fixture body with the call — endpoints, specs and config stay untouched, and
+  worker scope means one login per worker rather than one per test.
 - `PostsEndpoint` contains post-specific API methods:
     - `getPost`
     - `getPosts`
@@ -280,19 +293,89 @@ parsing so a non-2xx reports the status rather than an opaque parse error.
 
 ## CI/CD
 
-Two Azure pipelines are available:
+Two Azure pipelines, both thin entry points over one shared job definition in
+`.azure/playwright-job.yml`:
 
-- `azure-pipelinesUI.yml` - runs `--project=ui`
-- `azure-pipelinesAPI.yml` - runs `--project=api`
+- `azure-pipelinesUI.yml` - `project: ui`, installs browsers
+- `azure-pipelinesAPI.yml` - `project: api`, skips the browser download
 
-Both install dependencies, run Playwright, and publish:
+The shared job runs `lint`, `typecheck` and `format:check` before the suite, so a
+formatting or type error fails in seconds instead of after a browser run. It then
+publishes JUnit results (`results.xml`) and the Allure report, plus
+`test-results/` (traces, screenshots, videos) when something fails.
 
-- JUnit results (`results.xml`)
-- Allure report (`allure-report/`)
+### Failure triage
 
-> Known issue: both pipelines also publish a `playwright-report` artifact, but
-> no `html` reporter is configured, so that directory is never produced and the
-> step has nothing to upload. Remove the step or add the `html` reporter.
+When a run goes red, `.azure/scripts/triage-failures.mjs` summarises `results.xml`
+through `.claude/skills/debug-failure/scripts/failures.mjs`, attaches up to three
+failure screenshots, and asks Claude to classify each failure as **REAL BUG**,
+**STALE TEST**, **FLAKE**, or **INFRA** using the `debug-failure` skill as the
+rubric. The verdict is written to `triage.md` and attached to the Azure build
+summary page.
+
+It interprets a red run — it never changes one. It does not execute the suite,
+edit a spec, or affect the build result: the step is `condition: failed()` +
+`continueOnError: true`, and the script always exits 0. It skips itself when
+`ANTHROPIC_API_KEY` is unset, so the pipeline works unchanged without it.
+
+Run it locally against the last run with `npm run triage`.
+
+### Pipeline variables
+
+The env profile is gitignored, so CI has no profile file to read. Supply the five
+required vars as pipeline variables or a variable group — mark `PASSWORD` and
+`SECRET_KEY` secret:
+
+```text
+TEST_ENV  UI_URL  API_URL  USER_NAME  PASSWORD  SECRET_KEY
+```
+
+`dotenv` does not overwrite values already in the environment, so these win over
+any profile file that happens to exist on the agent.
+
+`ANTHROPIC_API_KEY` (secret) is optional — it only enables the failure-triage
+step below. Without it that step skips itself and everything else runs unchanged.
+
+## Using this as a template
+
+Everything here is either **scaffolding** (keep it, it's the framework) or
+**demo** (saucedemo + JSONPlaceholder, replace it with your own target).
+
+Keep as-is:
+
+```text
+playwright.config.ts   tsconfig.json   eslint.config.mjs   .prettierrc
+.gitattributes         .azure/playwright-job.yml
+api/base-request.ts    pages/base-page.ts
+fixtures/              utils/log-utils.ts    types/env.d.ts    .claude/
+```
+
+Replace with your own:
+
+```text
+pages/home-page.ts  pages/login-page.ts   locators are saucedemo's
+pages/navigation.ts                       URLs are saucedemo's
+api/endpoints/      api/payloads/         posts resource
+test-data/          tests/ui/  tests/api/
+tests/auth.setup.ts                       keep the storageState pattern,
+                                          swap the login flow
+```
+
+Then:
+
+1. Copy the example env profile to your own and fill in URLs and credentials.
+   Every var in `REQUIRED_ENV_VARS` must be present or the config throws at load.
+2. Empty the fixture types and `extend` blocks in `fixtures/`, then add your own
+   page objects and endpoints back as you write them.
+3. Delete the demo specs — keep one as a shape reference until your first real
+   spec passes.
+
+The `.claude/` directory is the part worth keeping verbatim: the skills encode
+locator policy, layering rules, and failure triage that apply to any Playwright
+project, and they're what keep an agent generating code that matches the rest of
+the repo.
+
+> Patterns verified against `@playwright/test` 1.62 and Node 22.
 
 ## Working with Claude Code
 
@@ -302,9 +385,14 @@ adds:
 - `skills/` - loaded on demand: `project-code-style`, `add-endpoint`,
   `add-ui-test`, `debug-failure`, plus three judgment lenses (`role-manual-qa`,
   `role-automation-qa`, `role-typescript-dev`)
-- `hooks/` - `guard-tests.mjs` refuses to execute the suite (`--list` passes),
-  `guard-paths.mjs` refuses to touch the env profile or `playwright/.auth/`
+- `hooks/` - `guard-paths.mjs` refuses to read, write, or shell-touch the env
+  profile or `playwright/.auth/`
 - `agents/spec-review.md` - read-only review of a suite diff
+
+`.mcp.json` wires up the [Playwright MCP server](https://github.com/microsoft/playwright-mcp)
+so an agent can open the app in a real browser and read the live DOM when
+writing locators, instead of guessing at `data-test` names. It is an authoring
+aid — it never runs in CI.
 
 Summarise the last run's failures with:
 

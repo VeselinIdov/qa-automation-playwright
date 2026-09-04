@@ -14,7 +14,7 @@ to run time.
 The type should permit only what is real.
 
 ```ts
-// weak — nothing stops an empty token, and every caller must remember to check
+// weak — nothing stops an empty token, and every caller must remember to pass it
 function authHeaders(token: string) {}
 
 // weak — optional everything, so every use site needs a guard
@@ -71,10 +71,11 @@ fields downstream is noise that implies the parse didn't happen.
 
 ## Fail fast and loudly
 
-`playwright.config.ts` throws at load if `UI_URL` or `API_URL` is missing, and
-`BaseRequest.authHeaders` throws on an empty token. Both are right: a missing
+`playwright.config.ts` throws at load if any of `REQUIRED_ENV_VARS` is missing,
+naming both the variable and the profile file. That is the right shape: a missing
 prerequisite should stop everything with a message naming the fix, not surface as
-a confusing failure three layers away.
+a confusing failure three layers away. It is also why auth needs no runtime
+guard — `SECRET_KEY` is validated before a single request is built.
 
 - Error messages state **what is wrong and where to fix it** —
   `` `Environment variable 'UI_URL' is not set in profiles/.env.${ENV}` `` is the
@@ -112,12 +113,11 @@ a confusing failure three layers away.
   `BaseRequest` earn their layer. A third level rarely does.
 - **Don't abstract on the first repeat.** Two similar lines are cheaper than a
   wrong abstraction. Wait for the third, when the shape is actually known.
-- **Delete dead code.** `utils/helpers.ts` currently has `getCurrentMonth` and
-  `deleteFileIfExists` with no callers, and `generateRandomString` duplicating
-  faker. Unused code reads as load-bearing and gets maintained for nothing.
-- **Prefer a plain function** to a class with no state. `test-data/` and
-  `utils/helpers.ts` are right to be functions; `LogUtils` is a class because it
-  holds a configured logger.
+- **Delete dead code.** `utils/helpers.ts` was removed for exactly this reason —
+  four exports, no callers, one of them re-implementing faker. Unused code reads
+  as load-bearing and gets maintained for nothing.
+- **Prefer a plain function** to a class with no state. `test-data/` is right to
+  be functions; `LogUtils` is a class because it holds a configured logger.
 
 ## Review checklist
 

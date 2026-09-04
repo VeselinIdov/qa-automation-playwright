@@ -28,25 +28,31 @@ npm run lint
 npx playwright test tests/ui --list    # enumerates, does not run
 ```
 
-**Never run `playwright test` to check your work.** It drives a real browser
-against `UI_URL` and mutates the shared login state. Running it is the user's
-call.
+You may run the spec you just wrote — scope it to that file, not the suite. It
+drives a real browser against `UI_URL` and mutates the shared login state, so
+`--repeat-each` loops and full-suite runs are the user's call, not a default.
 
 ## Before writing locators
 
 Do not invent selectors. Saucedemo uses `data-test` attributes throughout, and
 guessing produces tests that fail for the wrong reason.
 
-**Do not launch a browser or run the suite to find out.** Get the markup from:
+**Read the real markup.** In order of preference:
 
+- **The Playwright MCP server** (configured in `.mcp.json`) — navigate to the
+  page and read the accessibility snapshot. This is the reason it's wired up:
+  locators written from the live DOM instead of from memory.
 - an existing page object, for the convention already in use
 - markup or a `data-test` name the user provides
-- `npx playwright codegen $UI_URL` — only if the user asks for it
 
-Otherwise write the page object from the most plausible `data-test` naming and
-report the locators as **unverified**. An unverified locator that the user then
-confirms is a fine outcome; a locator you claim works without having checked is
-not.
+If none of those are available, write the page object from the most plausible
+`data-test` naming and report the locators as **unverified**. An unverified
+locator the user then confirms is a fine outcome; a locator you claim works
+without having looked is not.
+
+Reading the page over MCP needs a logged-in session for anything behind the
+login screen — drive the login form through MCP the same way `auth.setup.ts`
+does, rather than assuming the storage state applies.
 
 ## 1. Page object
 

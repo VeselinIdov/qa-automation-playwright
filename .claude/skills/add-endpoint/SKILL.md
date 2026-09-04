@@ -29,9 +29,9 @@ npm run lint
 npx playwright test tests/api --list    # enumerates, does not run
 ```
 
-**Never run `playwright test` to check your work.** The `api` project hits a
-live `API_URL` with real POST/PUT/PATCH/DELETE calls. Whether the suite runs is
-the user's decision — hand the work over and say what's unverified.
+You may run the spec you just wrote — scope it to that file. The `api` project
+hits a live `API_URL` with real POST/PUT/PATCH/DELETE calls, so re-running to
+see whether a failure settles is not a debugging strategy; read the error.
 
 ## Before writing anything
 
@@ -87,9 +87,10 @@ parse pass; that defeats the point of validating.
 
 ## 3. Endpoint class
 
-Extend `BaseRequest` to inherit the logged verb helpers and `authHeaders`. Path
-as a `private readonly` field. `token` is always the last parameter. Include
-only the verbs the resource actually supports.
+Extend `BaseRequest` to inherit the logged verb helpers. Path as a
+`private readonly` field. No `token` parameter — the `api` project sets the
+`Authorization` header for every request off the `authedRequest` fixture.
+Include only the verbs the resource actually supports.
 
 ```ts
 import { BaseRequest } from '../base-request'
@@ -98,20 +99,20 @@ import { CommentPayload } from '../payloads/requests/comment-payloads'
 export class CommentsEndpoint extends BaseRequest {
     private readonly commentsPath = 'comments'
 
-    async getComment(commentId: number, token: string) {
-        return await this.getRequest(`${this.commentsPath}/${commentId}`, token)
+    async getComment(commentId: number) {
+        return await this.getRequest(`${this.commentsPath}/${commentId}`)
     }
 
-    async getComments(token: string) {
-        return await this.getRequest(this.commentsPath, token)
+    async getComments() {
+        return await this.getRequest(this.commentsPath)
     }
 
-    async createComment(payload: CommentPayload, token: string) {
-        return await this.postRequest(this.commentsPath, payload, token)
+    async createComment(payload: CommentPayload) {
+        return await this.postRequest(this.commentsPath, payload)
     }
 
-    async patchComment(commentId: number, payload: Partial<CommentPayload>, token: string) {
-        return await this.patchRequest(`${this.commentsPath}/${commentId}`, payload, token)
+    async patchComment(commentId: number, payload: Partial<CommentPayload>) {
+        return await this.patchRequest(`${this.commentsPath}/${commentId}`, payload)
     }
 }
 ```
@@ -121,7 +122,7 @@ Don't add HTTP plumbing here. If a resource needs a verb or header shape
 the `logger.info` line consistent with its siblings.
 
 Nested resources belong on the owning resource's class:
-`getPostComments(postId, token)` → `posts/${postId}/comments` lives on
+`getPostComments(postId)` → `posts/${postId}/comments` lives on
 `PostsEndpoint`, not a new class.
 
 ## 4. Fixture wiring — don't skip
@@ -136,11 +137,15 @@ type ApiClients = {
     commentsEndpoint: CommentsEndpoint // 1. type
 }
 
-export const test = base.extend<ApiClients>({
-    postsEndpoint: async ({ request }, use) => await use(new PostsEndpoint(request)),
-    commentsEndpoint: async ({ request }, use) => await use(new CommentsEndpoint(request)), // 2. extend block
+export const test = base.extend<ApiClients, ApiWorkerFixtures>({
+    postsEndpoint: async ({ authedRequest }, use) => await use(new PostsEndpoint(authedRequest)),
+    commentsEndpoint: async ({ authedRequest }, use) => await use(new CommentsEndpoint(authedRequest)), // 2.
 })
 ```
+
+Take `authedRequest`, never the built-in `request` — that's what carries the
+`Authorization` and `Content-Type` headers. Leave `apiToken` and `authedRequest`
+alone; a new endpoint never touches them.
 
 Fixture name is the class name in camelCase. It's lazy — declaring it costs
 nothing for specs that don't request it.
@@ -175,14 +180,13 @@ import {
 } from '../../api/payloads/response/comment-response'
 import { CommentPayload } from '../../api/payloads/requests/comment-payloads'
 
-test.describe('Comments API tests', () => {
-    const token = process.env.SECRET_KEY ?? 'test-token'
+test.describe('Comments API tests', { tag: '@api' }, () => {
+    test('should retrieve a comment by id', async ({ commentsEndpoint }) => {
+        const response = await commentsEndpoint.getComment(1)
 
-    test('should retrieve a comment by id', { tag: '@api' }, async ({ commentsEndpoint }) => {
-        const resp = await commentsEndpoint.getComment(1, token)
-        const comment = deserializeCommentResponse(await resp.json())
+        expect(response.status()).toBe(200)
 
-        expect(resp.status()).toBe(200)
+        const comment = deserializeCommentResponse(await response.json())
         expect(comment.id).toEqual(1)
     })
 })
@@ -190,9 +194,9 @@ test.describe('Comments API tests', () => {
 
 Cover per verb: happy path with a status assertion plus at least one payload
 assertion; for writes, assert the response echoes what you sent. `POST` expects
-`201`, the rest `200`. `DELETE` on this API returns a 2xx that isn't worth
-pinning exactly — `toBeGreaterThanOrEqual(200)` / `toBeLessThan(300)`, as
-`posts-api.test.ts` does.
+`201`, the rest `200` — including `DELETE`. **Pin the exact status.** A range
+like `toBeGreaterThanOrEqual(200)` / `toBeLessThan(300)` passes on any 2xx and
+hides a contract change from 200 to 204.
 
 Tag everything `@api`. Don't add negative-path tests against a mock API like
 jsonplaceholder unless asked — it doesn't validate input, so a 4xx assertion

@@ -9,20 +9,37 @@ trustworthy signal. A green run that hides a real defect is worse than a red one
 
 ## Answers
 
-Short and simple, always. Lead with the answer. Prefer a few sentences or a
-short list over sections and tables. No preamble, no recap of what was just
-done, no restating the request. Only expand when explicitly asked, or to flag
-something that changes the user's decision — and then in one or two sentences.
+**Hard limit: 100 words.** Not a target to approach — most answers should be
+well under it. Lead with the answer. No preamble, no recap of what was just
+done, no restating the request. Prefer a few sentences or a short list over
+sections and tables; if an answer seems to need headers, it's too long.
+
+Cut, don't compress: drop the caveats, alternatives, and background rather than
+writing the same content densely. One or two sentences to flag something that
+changes the user's decision is always worth the words.
+
+Three exceptions, and only these:
+
+- **Code.** Code blocks, file contents, and diffs don't count toward the limit —
+  never truncate code to fit. The prose around them still does.
+- **Explicit asks** — "explain", "in detail", "review this", "what would you
+  change". Then answer at whatever length the question deserves.
+- **Enumerating findings** — a review or an audit lists what it found. Keep each
+  item to a line or two.
+
+When over the limit with no exception in play, the fix is fewer points, not
+shorter sentences.
 
 ## Hard rules
 
-1. **Never run `playwright test`.** Not the suite, not one spec, not via a
-   subagent. It hits live services and drives a real browser. A hook
-   (`.claude/hooks/guard-tests.mjs`) blocks the runner and the `npm test*`
-   scripts that wrap it; `--list` is allowed through. Verify with
-   `npm run typecheck`, `npm run lint`, and `npx playwright test --list`
-   (enumerates without executing), then say what is unverified and let the user
-   run it.
+1. **Running the suite is allowed, but scope it.** It hits live services, drives
+   a real browser, and overwrites `results.xml` and `test-results/`. Run the
+   narrowest thing that answers the question — one spec, or `--project=api` —
+   not the full suite, and never in a loop until something passes. Do the cheap
+   checks first (`npm run typecheck`, `npm run lint`,
+   `npx playwright test --list`); a green run does not excuse a red typecheck.
+   Report failures with their output rather than re-running to see if they
+   settle.
 2. **Never weaken a test to make it pass** — no raising `retries`/`timeout`, no
    `waitForTimeout`, no bare `test.skip`, no broadening a locator until it
    matches. If the honest answer is "this needs a product fix", say that.
@@ -41,13 +58,13 @@ something that changes the user's decision — and then in one or two sentences.
 ## Layout
 
 ```text
-api/          base-request.ts (HTTP verbs + auth + logging), endpoints/,
+api/          base-request.ts (HTTP verbs + logging), endpoints/,
               payloads/requests/ (interfaces), payloads/response/ (zod schemas)
 pages/        page objects, all extend BasePage
 fixtures/     page-fixtures.ts, endpoints-fixtures.ts
 tests/        auth.setup.ts, ui/, api/
 test-data/    faker generators
-utils/        helpers.ts, log-utils.ts (winston singleton)
+utils/        log-utils.ts (winston singleton)
 types/        ambient .d.ts only, wired in via tsconfig include
 profiles/     .env.<TEST_ENV>   (gitignored, TEST_ENV defaults to dev)
 ```
@@ -61,8 +78,8 @@ runtime.
 
 ## Environment
 
-`playwright.config.ts` throws at load time if `UI_URL` or `API_URL` is missing,
-so a `profiles/.env.<TEST_ENV>` file must exist before anything runs —
+`playwright.config.ts` throws at load time if any of these is missing, so a
+`profiles/.env.<TEST_ENV>` file must exist before anything runs —
 `npx playwright test --list` dies during config load without it. Vars consumed:
 
 | var                    | used by                                |
@@ -70,7 +87,7 @@ so a `profiles/.env.<TEST_ENV>` file must exist before anything runs —
 | `UI_URL`               | `baseURL` for `setup` and `ui`         |
 | `API_URL`              | `baseURL` for `api`                    |
 | `USER_NAME` `PASSWORD` | `tests/auth.setup.ts` login            |
-| `SECRET_KEY`           | `tests/api/posts-api.test.ts` auth     |
+| `SECRET_KEY`           | `apiToken` fixture, API auth header    |
 | `TEST_ENV`             | picks the profile file, defaults `dev` |
 
 ## Determinism settings
@@ -92,8 +109,14 @@ npm run typecheck              # tsc --noEmit
 npm run lint                   # eslint .
 npm run format                 # prettier . --write
 npx playwright test --list     # enumerate without executing
-npx playwright test --list --project=api    # scope to one project
+npm run triage                 # classify the last red run (needs ANTHROPIC_API_KEY)
+
+npx playwright test tests/ui/home-page.test.ts   # one spec — the default when running
+npx playwright test --project=api                # one project
 ```
+
+`.mcp.json` wires up the Playwright MCP server. Use it to read a page's real
+markup before writing locators; it is an authoring aid and never runs in CI.
 
 Reporters are `allure-playwright` (`allure-results/`) and `junit`
 (`results.xml`) only — there is no HTML report. Build the Allure report with

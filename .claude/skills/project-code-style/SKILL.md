@@ -28,10 +28,11 @@ npm run lint            # eslint .
 npm run typecheck       # tsc --noEmit
 ```
 
-**Never run `playwright test` to verify your work** — not the full suite, not a
-single spec, not via a subagent. It hits live services and drives a real
-browser. `npx playwright test --list` enumerates tests without executing them
-and is always safe. Report what you left unverified and let the user run it.
+Run these three before reaching for the suite — they are seconds, and a green
+run does not excuse a red typecheck. `npx playwright test --list` enumerates
+without executing and is always safe. Running the suite is allowed, but it hits
+live services and drives a real browser: scope it to the spec you changed, and
+leave full-suite runs to the user.
 
 `tsconfig.json` is `strict: true` with `noImplicitAny`. No `any`, no
 `@ts-ignore`. `!` non-null assertion is used sparingly and only for env vars
@@ -58,7 +59,7 @@ editing rather than imposing one style on both.
 
 ```text
 api/
-  base-request.ts               HTTP verbs + auth headers + logging
+  base-request.ts               HTTP verbs + request logging
   endpoints/                    one class per resource
   payloads/requests/            plain interfaces for request bodies
   payloads/response/            zod schemas + deserializers
@@ -66,7 +67,7 @@ fixtures/                       page-fixtures.ts, endpoints-fixtures.ts
 pages/                          page objects, all extend BasePage
 tests/                          auth.setup.ts, ui/, api/
 test-data/                      faker generators
-utils/                          helpers.ts, log-utils.ts
+utils/                          log-utils.ts
 profiles/                       .env.<TEST_ENV>
 ```
 
@@ -82,7 +83,9 @@ methods — never make a locator public.
 
 ```ts
 export class HomePage extends BasePage {
-    private readonly pageHeader: Locator = this.page.getByText('Products')
+    private readonly pageHeader: Locator = this.page
+        .locator('[data-test="title"]')
+        .filter({ hasText: 'Products' })
 
     constructor(page: Page) {
         super(page)
@@ -107,9 +110,17 @@ export class HomePage extends BasePage {
 - **No `page.goto` in a spec.** URLs live in `Navigation` (`homePageURL`) or
   `BasePage.open()`.
 
-Locator preference, strongest first: `getByRole` / `getByPlaceholder` /
-`getByText`, then `[data-test="..."]`. Never XPath, never structural CSS
+Locator preference, strongest first: `getByRole` / `getByPlaceholder`, then
+`[data-test="..."]`, then `getByText`. Never XPath, never structural CSS
 (`div > div:nth-child(3)`), never a class chain.
+
+Bare `getByText` is last for a reason — it substring-matches across the whole
+page, so `getByText('Login')` also hits the credentials panel on saucedemo's
+login screen. Reach for the role (`getByRole('button', { name: 'Login' })`) when
+the element has one, and `data-test` when it doesn't. Where a `data-test` value
+is reused across screens (`title` is `Products` on inventory, `Your Cart` on the
+cart), pin it with `.filter({ hasText })` so the locator still identifies the
+page.
 
 ## API layer
 
@@ -117,32 +128,38 @@ Locator preference, strongest first: `getByRole` / `getByPlaceholder` /
 request without awaiting; the endpoint class awaits.
 
 ```ts
-postRequest(path: string, payload: object, token: string) {
+postRequest(path: string, payload: object) {
     logger.info(`Sending POST request to: ${path}`)
-    return this.api.post(path, {
-        data: payload,
-        headers: this.authHeaders(token),
-    })
+    return this.api.post(path, { data: payload })
 }
 ```
 
-Endpoint classes extend `BaseRequest`, hold the resource path as a
-`private readonly` field, and pass `token` as the **last** parameter of every
-method:
+Endpoint classes extend `BaseRequest` and hold the resource path as a
+`private readonly` field. Methods take only what the request needs — no `token`
+parameter:
 
 ```ts
 export class PostsEndpoint extends BaseRequest {
     private readonly postsPath = 'posts'
 
-    async patchPost(postId: number, payload: Partial<PostPayload>, token: string) {
-        return await this.patchRequest(`${this.postsPath}/${postId}`, payload, token)
+    async patchPost(postId: number, payload: Partial<PostPayload>) {
+        return await this.patchRequest(`${this.postsPath}/${postId}`, payload)
     }
 }
 ```
 
 - PATCH takes `Partial<PostPayload>`; PUT takes the full `PostPayload`.
-- Auth validation lives in `BaseRequest.authHeaders` and throws on an empty
-  token. Don't re-check it per endpoint.
+- **Auth is not threaded through calls.** The `authedRequest` fixture builds an
+  `APIRequestContext` carrying `Authorization` and `Content-Type`, and every
+  endpoint hangs off it. Not `playwright.config.ts` — a token fetched from a
+  login endpoint isn't known at config load, and the fixture handles both cases.
+- **The token comes from the worker-scoped `apiToken` fixture.** Static
+  `SECRET_KEY` today; swapping in a login call is a change to that one fixture
+  body, with no config, endpoint, or spec edits. Worker scope means one login per
+  worker rather than one per test.
+- A test needing a _different_ token (expired, wrong scope) builds its own
+  context with `playwright.request.newContext()` rather than reintroducing a
+  parameter.
 - Log lines describe the request only — never log tokens, payloads, or response
   bodies.
 
@@ -201,19 +218,18 @@ adding it to the fixture type and the `extend` block in the same commit.
 ```ts
 import { test, expect } from '../../fixtures/endpoints-fixtures'
 
-test.describe('Posts API tests', () => {
-    const token = process.env.SECRET_KEY
-
-    test('should create a post', { tag: '@api' }, async ({ postsEndpoint }) => {
+test.describe('Posts API tests', { tag: '@api' }, () => {
+    test('should create a post', async ({ postsEndpoint }) => {
         const payload: PostPayload = {
             userId: randomUserId(),
             title: randomTitle(),
             body: randomBody(),
         }
-        const resp = await postsEndpoint.createPost(payload, token)
-        const post = deserializePostResponse(await resp.json())
+        const response = await postsEndpoint.createPost(payload)
 
-        expect(resp.status()).toBe(201)
+        expect(response.status()).toBe(201)
+
+        const post = deserializePostResponse(await response.json())
         expect(post.title).toBe(payload.title)
     })
 })
@@ -221,11 +237,13 @@ test.describe('Posts API tests', () => {
 
 - Wrap every spec in `test.describe`.
 - Tags go in the **options object** — `{ tag: '@api' }` — not in the title
-  string. In use: `@smoke`, `@ui`, `@api`.
-- Naming inside a test: `resp` for the response, the entity name for the parsed
-  body (`post`, `postsList`).
-- Assert **status first, then payload fields.** Blank line between the
-  arrange/act block and the assertions.
+  string, and hoist to the `describe` when the whole file shares one. In use:
+  `@smoke`, `@ui`, `@api`.
+- Naming inside a test: `response` for the response, the entity name for the
+  parsed body (`post`, `postsList`).
+- **Assert the status before deserializing**, so a non-2xx reports the status
+  rather than an opaque zod parse error. Blank line between the arrange/act
+  block and the assertions.
 - Test data comes from `test-data/` helpers. Don't call `faker` inline in a spec.
 - `fullyParallel` is **false** globally. A spec safe to parallelise opts in
   itself with `test.describe.configure({ mode: 'parallel' })`, as
@@ -288,6 +306,5 @@ you're already editing the file, and don't reformat whole files as a drive-by.
 4. **`README.md` is stale**: it puts test data at `tests/test-data/api/` (actually
    `test-data/`) and states Node `>=20` (`package.json` now requires
    `^20.19.0 || ^22.13.0 || >=24`).
-5. **`utils/helpers.ts`** uses `switch (true)` in `getCurrentQuarter`, and
-   `generateRandomString` duplicates what faker already provides. `getCurrentMonth`
-   and `deleteFileIfExists` have no callers.
+5. **`tsconfig.json` `include`** still lists `config/**/*.ts`, `helpers/**/*.ts`
+   and `enums/**/*.ts` — none of those directories exist.

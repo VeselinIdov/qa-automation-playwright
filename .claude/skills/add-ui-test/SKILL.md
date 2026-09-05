@@ -39,9 +39,11 @@ guessing produces tests that fail for the wrong reason.
 
 **Read the real markup.** In order of preference:
 
-- **The Playwright MCP server** (configured in `.mcp.json`) — navigate to the
-  page and read the accessibility snapshot. This is the reason it's wired up:
-  locators written from the live DOM instead of from memory.
+- **`npx playwright cli`** — drive a headless browser from the terminal and read
+  the selector it echoes back. See "Reading a page before writing locators" in
+  `CLAUDE.md` for the command sequence. Log in through it first (saucedemo
+  prints its own credentials on the login page); targets are refs from `find`,
+  not visible text; `close` the session when done.
 - an existing page object, for the convention already in use
 - markup or a `data-test` name the user provides
 
@@ -50,8 +52,8 @@ If none of those are available, write the page object from the most plausible
 locator the user then confirms is a fine outcome; a locator you claim works
 without having looked is not.
 
-Reading the page over MCP needs a logged-in session for anything behind the
-login screen — drive the login form through MCP the same way `auth.setup.ts`
+Reading the page over the CLI needs a logged-in session for anything behind the
+login screen — drive the login form through it the same way `auth.setup.ts`
 does, rather than assuming the storage state applies.
 
 ## 1. Page object

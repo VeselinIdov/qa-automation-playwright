@@ -15,3 +15,7 @@ profiles/.env.*
 .idea/
 *.iml
 triage.md
+
+# playwright cli authoring artifacts
+/.playwright-cli/
+/.playwright/

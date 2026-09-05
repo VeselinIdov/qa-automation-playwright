@@ -79,7 +79,6 @@ profiles/
     triage-failures.mjs # classifies a red run, posts to the build summary
 
 .claude/                # CLAUDE.md instructions, skills, hooks, agents
-.mcp.json               # Playwright MCP server, for reading live markup
 playwright.config.ts
 azure-pipelinesUI.yml
 azure-pipelinesAPI.yml
@@ -389,10 +388,11 @@ adds:
   profile or `playwright/.auth/`
 - `agents/spec-review.md` - read-only review of a suite diff
 
-`.mcp.json` wires up the [Playwright MCP server](https://github.com/microsoft/playwright-mcp)
-so an agent can open the app in a real browser and read the live DOM when
-writing locators, instead of guessing at `data-test` names. It is an authoring
-aid — it never runs in CI.
+`npx playwright cli` drives a headless browser from the terminal, so an agent
+can read the live DOM when writing locators instead of guessing at `data-test`
+names. Every action echoes the Playwright code it ran, which is the selector
+that goes in the page object. It ships inside `playwright-core` — nothing to
+install — and it never runs in CI. Snapshots land in `.playwright-cli/`.
 
 Summarise the last run's failures with:
 

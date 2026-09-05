@@ -115,12 +115,61 @@ npx playwright test tests/ui/home-page.test.ts   # one spec — the default when
 npx playwright test --project=api                # one project
 ```
 
-`.mcp.json` wires up the Playwright MCP server. Use it to read a page's real
-markup before writing locators; it is an authoring aid and never runs in CI.
+## Reading a page before writing locators
+
+Never invent a selector. Any task that writes or repairs one — a new page
+object, "check this page", "these locators are broken" — starts here.
+
+Use `npx playwright cli`, a terminal front-end that drives a real headless
+browser. It ships inside `playwright-core`, so there is nothing to install
+or enable, and it never runs in CI.
+
+```bash
+npx playwright cli -s=<name> open <url>          # headless; snapshot goes to a file
+npx playwright cli -s=<name> find "Add to cart"  # matching nodes + refs, not the tree
+npx playwright cli -s=<name> click e54           # act on a ref
+npx playwright cli -s=<name> close
+```
+
+Two things make it the right tool here:
+
+- Every action echoes the Playwright code it ran —
+  `page.locator('[data-test="add-to-cart-sauce-labs-backpack"]')` — so the
+  selector that goes in the page object is one the browser just used, not one
+  written from memory.
+- `find` returns only matching nodes. Full snapshots and console logs are
+  written to `.playwright-cli/` (gitignored), so reading a page costs a search
+  result rather than a whole accessibility tree.
+
+Targets are refs from `find` (`e54`), not visible text — `click "Login"` fails.
+Anything behind the login screen needs the login form driven through the CLI
+first; the suite's storage state does not apply.
+
+If the CLI is unavailable, write the page object from the most plausible
+`data-test` naming and report the locators as **unverified**.
 
 Reporters are `allure-playwright` (`allure-results/`) and `junit`
 (`results.xml`) only — there is no HTML report. Build the Allure report with
 `npx allure generate allure-results --clean -o allure-report`.
+
+## Git
+
+"Push the code" — or "push it", "commit and push" — means do it: stage the
+changes, commit, push. No plan, no confirmation round-trip.
+
+- **One-line message, no body.** Conventional prefix, lower case, imperative,
+  matching the existing log: `test(ui): cover the checkout flow`,
+  `fix: correct the cart badge locator`, `chore: bump playwright to 1.62`.
+- **Cheap checks first** — `npm run typecheck` and `npm run lint`. If either is
+  red, report it and stop; do not commit around it.
+- **Never commit to `master`.** On `master`, cut a topic branch first, named
+  after the change (`test/checkout-flow`, `fix/cart-badge-locator`), commit
+  there and push with `-u`. Opening the PR is the user's call, not an
+  automatic follow-up. On a topic branch already, just commit and push to it.
+- State the branch name in the reply, with the push result.
+- A `Co-Authored-By` trailer is appended automatically — that is the one thing
+  in the message that isn't one line.
+- Never `--no-verify`, never force-push, never commit `profiles/.env.*`.
 
 ## Skills — load these rather than re-deriving conventions
 
